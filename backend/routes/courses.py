@@ -68,7 +68,7 @@ Endpoint to get the course overview
 @router.get('/courses/{course_id}', response_model=CourseOverview)
 def get_course(course_id: str, current_user: User =
 Depends(get_current_active_user)):
-   course = get_course(course_id)
+    course = get_course(course_id)
     return course
      
 """ 
