@@ -2,9 +2,11 @@ import contextlib
 from fastapi import FastAPI, HTTPException, Query
 from pymongo import MongoClient
 from bson import ObjectId
-from fastapi import APIRouter
-from models import CourseOverview, CourseDetail, ChapterDetail, RatingInput, CourseNotFoundResponse, ChapterNotFoundResponse
-
+from fastapi import APIRouter, Depends
+from typing import List
+from routes.auth import get_current_active_user 
+from models.courses import CourseOverview, CourseDetail, ChapterDetail, RatingInput # CourseNotFoundResponse, ChapterNotFoundResponse
+from models.auth import User
 
 
 app = FastAPI()
@@ -75,7 +77,7 @@ Depends(get_current_active_user)):
 Endpoint to get a specific chapter information.
 """ 
 @router.get('/courses/{course_id}/{chapter_id}', response_model=ChapterDetail)
-def get_chapter(course_id: str, chapter_id: str, chapter_id: str, current_user: User =
+def get_chapter(course_id: str, chapter_id: str, current_user: User =
 Depends(get_current_active_user)):    
     course = get_course(course_id)
     chapters = course.get('chapters', [])
@@ -86,7 +88,7 @@ Depends(get_current_active_user)):
     return ChapterDetail(**chapter)
 
 # Endpoint to allow users to rate each chapter (positive/negative) 1 for Positive, -1 For Negative, while aggregating all ratings for each course.
-@router.post('/courses/{course_id}/{chapter_id}', response_model:ChapterDetail)
+@router.post('/courses/{course_id}/{chapter_id}', response_model=ChapterDetail)
 def rate_chapter(course_id: str, chapter_id: str, rating: RatingInput, current_user: User = Depends(get_current_active_user)):
     course = get_course(course_id)
     chapters = course.get('chapters', [])
