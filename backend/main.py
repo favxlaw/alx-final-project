@@ -1,5 +1,8 @@
 from fastapi import FastAPI 
-from routes import auth, courses
+from routes import auth, courses, user 
+#from schemas.user import User
+
+app = FastAPI(include_in_schema_for_serialization={"schema"})
 
 app = FastAPI()
 
@@ -9,4 +12,7 @@ async def root():
 
 app.include_router(auth.router)
 app.include_router(courses.router)
+app.include_router(user.router)
+#app.include_model(User)
+
 

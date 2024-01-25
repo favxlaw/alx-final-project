@@ -1,6 +1,18 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, ClassVar
 from datetime import datetime
+
+from fastapi.security import OAuth2PasswordBearer
+
+# Response model
+class ResponseModel(BaseModel):
+    detail: str
+
+# Error response model
+class ErrorResponseModel(BaseModel):
+    message: str
+    status_code: int
+    error: str
 
 # User Model
 class User(BaseModel):
