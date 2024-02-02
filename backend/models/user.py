@@ -1,9 +1,6 @@
 from pydantic import BaseModel, Field, constr, root_validator, ValidationError, EmailStr
 from typing import Optional, List
 from typing_extensions import Literal
-
-
-
 from typing import Optional
 from pydantic import BaseModel, EmailStr, Field, validator
 import re
