@@ -2,15 +2,14 @@ from fastapi import APIRouter, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from jose import jwt, JWTError
 from fastapi import Depends
-from sqlalchemy.orm import Session 
 from datetime import datetime, timedelta
-from ..crud import crud
-from models.auth import User, Token
-
-
-from . import  crud, models, schemas
-from .database import get_db
-from .utils import get_hashed_password, verify_password # Corrected the typo
+from schemas import schemas
+from models.auth import Token, Config, User, PyObjectId
+from config.db import user_collection
+from .utils import get_hashed_password, verify_password
+from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import MongoClient
+from bson.objectid import ObjectId
 
 
 #  secret key and algorithm for JWT
@@ -24,11 +23,11 @@ ACCESS_TOKEN_EXPIRE = 25
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 # Verify user credentials
-def verify_credentials(username: str, password: str):
-    user = crud.get_user_by_username(username) # Replaced users with crud.get_user_by_username
-    if not user or user.password != password:
+async def verify_credentials(username: str, password: str):
+    user = await user_collection.find_one({"username": username})
+    if not user or not verify_password(password, user["hashed_password"]):
         return False
-    return user 
+    return User(**user)
 
 # Function to create an access token
 def create_access_token(data: dict, expires_delta: timedelta = None):
@@ -36,16 +35,16 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
     if expires_delta:
         expires = datetime.utcnow() + expires_delta
     else:
-        expires = datetime.utcnow() + timedelta(minutes=15) # Renamed expire to expires
+        expires = datetime.utcnow() + timedelta(minutes=15)
     to_encode.update({"exp": expires})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-# Function to get the curent user from the token
-def get_current_user(token: str = Depends(oauth2_scheme)):
+# Function to get the current user from the token
+async def get_current_user(token: str = Depends(oauth2_scheme)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail= "Could not validate credentials",
+        detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
@@ -55,16 +54,16 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-    user = crud.get_user_by_username(username) # Replaced users with crud.get_user_by_username
+    user = await user_collection.find_one({"username": username})
     if user is None:
         raise credentials_exception
-    return user
+    return User(**user)
 
 # Function to get the current active user from the token
-def get_current_active_user(current_user: schemas.User = Depends(get_current_user)): # Changed models.User to schemas.User
-     if not current_user.is_active:
-         raise HTTPException(status_code=400, details="Inactive user")
-     return current_user
+async def get_current_active_user(current_user: User = Depends(get_current_user)):
+    if not current_user.is_active:
+        raise HTTPException(status_code=400, detail="Inactive user")
+    return current_user
 
 # API router
 router = APIRouter()
@@ -72,7 +71,7 @@ router = APIRouter()
 # Token Endpoint
 @router.post("/token", response_model=Token)
 async def create_token(form_data: OAuth2PasswordRequestForm = Depends()):
-    user = verify_credentials(form_data.username, form_data.password )
+    user = await verify_credentials(form_data.username, form_data.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -85,26 +84,26 @@ async def create_token(form_data: OAuth2PasswordRequestForm = Depends()):
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
-
-@router.post("/signup", response_model=schemas.User)
-async def signup(user: schemas.UserCreate, db: Session = Depends(get_db)):
+@router.post("/signup", response_model=User)
+async def signup(user: schemas.UserCreate):
     # Hash the user's password
     user.hashed_password = get_hashed_password(user.password)
     # Check if the user already exists
-    db_user = crud.get_user_by_username(db, user.username)
+    db_user = await user_collection.find_one({"username": user.username})
     if db_user:
         raise HTTPException(status_code=400, detail="Username already taken")
-    db_user = crud.get_user_by_email(db, user.email)
+    db_user = await user_collection.find_one({"email": user.email})
     if db_user:
         raise HTTPException(status_code=400, detail="Email already taken")
     # Create the user in the database
-    return crud.create_user(db, user)
+    user.id = await user_collection.insert_one(user.dict(by_alias=True))
+    return user
 
-@router.post("/login", response_model=schemas.Token)
-async def login(form_data: OAuth2PasswordRequestForm = Depends(), db:
-                Session = Depends(get_db)):
-    # Verify the username and password
-    user = crud.get_user_by_username(db, form_data.username)
-    if not user or not verify_password(form_data.password, user.hashed_password):
-        raise HTTPException(status_code=400, detail="Incorrect username or password") 
-    
+@router.post("/login", response_model=Token)
+async def login(current_user: User = Depends(get_current_active_user)):
+    # Generate a new access token for the logged in user
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE)
+    access_token = create_access_token(
+        data={"sub": current_user.username}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
