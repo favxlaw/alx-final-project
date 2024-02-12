@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from schemas import schemas
 from models.auth import Token, Config, User, PyObjectId
 from config.db import user_collection
-from .utils import get_hashed_password, verify_password
+from . utils import get_hashed_password, verify_password
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo import MongoClient
 from bson.objectid import ObjectId
