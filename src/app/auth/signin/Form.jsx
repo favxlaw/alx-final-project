@@ -16,34 +16,25 @@ const Form = () => {
   } = useForm({ reValidateMode: "onChange" });
 
   const Submit = async (data) => {
-
-    try {
-      
-      const response = await api.post(
-        "https://lms-api-6k50.onrender.com/signup",
-        data,
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      const result = response.json()
-      console.log(data);
-      console.log(result);
-    } catch (error) {
-      console.log(error)
-    }
+    const response = await api.post(
+      "https://lms-api-6k50.onrender.com/signin",
+      data,
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    const result = response.json();
+    console.log(data);
+    console.log(result);
   };
 
   return (
     <div className="sm:rounded-r-[5%] rounded-b-[5%] sm:mb-0 sm:rounded-b-none min-h-screen w-5/6 pl-0 sm:pl-6 my-auto mx-auto sm:mx-0 flex flex-col justify-center h-ful">
-
       <div className="h-[80%] w-full">
-
-
-        <h1 className="text-3xl font-bold tracking-wide my-2">Sign Up</h1>
-        <p>Sign up to enjoy smooth and seamless learning</p>
+        <h1 className="text-3xl font-bold tracking-wide my-2">Log In</h1>
+        <p>Log in to continue smooth and seamless learning</p>
 
         {/* START OF FORM */}
 
@@ -51,8 +42,7 @@ const Form = () => {
           {/* FORM CONTENT */}
 
           <div className="grid my-5 gap-3">
-            <div className="grid gap-5">
-              
+            {/* <div className="grid gap-5">
               <Text
                 placeholder="Full Name"
                 title="Full Name"
@@ -63,7 +53,7 @@ const Form = () => {
                 register={register}
                 error={errors}
               />
-            </div>
+            </div> */}
             <div className="grid gap-3">
               <Text
                 title="Email Address"
@@ -91,13 +81,13 @@ const Form = () => {
 
           <div className="sm:flex grid gap-3 sm:gap-0 items-center sm:justify-between justify-center text-center mb-3 sm:mb-0">
             <p className="text-sm flex gap-3">
-              Already have an account?  
-              <Link href="/auth/signin" className="underline">
-                  Sign in here
+              Don't have an account?
+              <Link href="/auth/signup" className="underline">
+                Sign up here
               </Link>
             </p>
             <Button
-              title="Create Account"
+              title="Login"
               className="text-white bg-green-400 border border-white py-2 px-6 sm:px-4 rounded-md sm:w-1/3 w-full"
               type="submit"
             />
@@ -106,7 +96,6 @@ const Form = () => {
 
         {/* END OF FORM */}
       </div>
-
     </div>
   );
 };
